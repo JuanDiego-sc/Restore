@@ -16,8 +16,8 @@ export default function ProductList({ products }: Props) {
         justifyContent: "center",
       }}
     >
-      {products.map((product) => (
-        <ProductCard product={product} />
+      {products.map((product, index) => (
+        <ProductCard key={index} product={product} />
       ))}
     </Box>
   );
