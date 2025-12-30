@@ -2,15 +2,17 @@ import { configureStore } from '@reduxjs/toolkit';
 import { useDispatch, useSelector } from 'react-redux';
 import { catalogAPI } from '../features/catalog/catalogAPI';
 import { uiSlices } from '../layout/uiSlices';
+import { errorApi } from '../features/about/ErrorApi';
 
 
 export const store = configureStore({
     reducer: {
         [catalogAPI.reducerPath]: catalogAPI.reducer,
+        [errorApi.reducerPath] : errorApi.reducer,
         ui: uiSlices.reducer
     },
     middleware: (getDefaultMiddleware) => 
-            getDefaultMiddleware().concat(catalogAPI.middleware)
+            getDefaultMiddleware().concat(catalogAPI.middleware, errorApi.middleware)
 })
 
 export type RootState = ReturnType<typeof store.getState>
