@@ -19,7 +19,7 @@ public static class BasketExtensions
                     PictureUrl = x.Product.PictureUrl,
                     Brand = x.Product.Brand,
                     Type = x.Product.Type,
-                    Quantity = x.Product.QuantityInStock
+                    Quantity = x.Quantity
                 })]
             };
     }
