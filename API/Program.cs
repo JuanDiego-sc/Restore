@@ -1,5 +1,7 @@
 using API.Data;
+using API.Entities;
 using API.Middleware;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +15,14 @@ builder.Services.AddDbContext<StoreContext>(opt =>
    opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")); 
 });
 
+builder.Services.AddIdentityApiEndpoints<User>(options =>
+{
+   options.User.RequireUniqueEmail = true;
+})
+   .AddRoles<IdentityRole>()
+   .AddEntityFrameworkStores<StoreContext>();
+
+
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionMiddleware>();
@@ -24,9 +34,13 @@ app.UseCors(opt =>
    .WithOrigins("https://localhost:3000");
 });
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
+app.MapGroup("api").MapIdentityApi<User>();
 
 
-DbInitializer.Initdb(app);
+await DbInitializer.Initdb(app);
 
 app.Run();

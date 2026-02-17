@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.Design.Serialization;
 using API.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Build.Framework;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,19 +9,45 @@ namespace API.Data;
 
 public class DbInitializer
 {
-    public static void Initdb(WebApplication app)
+    public static async Task Initdb(WebApplication app)
     {
         using var scope = app.Services.CreateScope();
 
         var context = scope.ServiceProvider.GetRequiredService<StoreContext>()
             ?? throw new InvalidOperationException("Failed to retrieve store context");
+        
+        var userManger = scope.ServiceProvider.GetRequiredService<UserManager<User>>()
+            ?? throw new InvalidOperationException("Failed to retrieve user manager context");
 
-        SeedData(context);
+        await SeedData(context, userManger);
     }
 
-    private static void SeedData(StoreContext context)
+    private static async Task SeedData(StoreContext context, UserManager<User> userManager)
     {
         context.Database.Migrate();
+
+        if (!userManager.Users.Any())
+        {
+            var user = new User
+            {
+                UserName = "bob@test.com",
+                Email = "bob@test.com",
+                
+           };
+
+           await userManager.CreateAsync(user, "Pa$$w0rd");
+           await userManager.AddToRoleAsync(user, "Member");
+
+           var admin = new User
+            {
+                UserName = "admin@test.com",
+                Email = "admin@test.com",
+                
+           };
+
+           await userManager.CreateAsync(admin, "Pa$$w0rd");
+           await userManager.AddToRolesAsync(admin, ["Member", "Admin"]);
+        }
 
         if (context.Products.Any()) return;
 
@@ -205,6 +232,9 @@ public class DbInitializer
                     QuantityInStock = 100
                 },
         };
+
+
+        
 
         context.Products.AddRange(products);
         context.SaveChanges();
