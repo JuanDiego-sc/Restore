@@ -2,6 +2,7 @@ import type { Product } from "./product";
 
 export type Basket = {
   basketId: string
+  clientSecret?: string
   items: BasketItem[]
 }
 
