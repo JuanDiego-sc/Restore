@@ -21,21 +21,21 @@ public class OrderController(StoreContext context) : BaseApiController
             .AsNoTracking()
             .ProjectToDto()
             .Where(o => o.BuyerEmail == User.GetUsername())
-            .ToListAsync(); 
+            .ToListAsync();
 
         return orders;
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<OrderDto>> GetOrderDetails(int id )
+    public async Task<ActionResult<OrderDto>> GetOrderDetails(int id)
     {
         var order = await context.Orders
             .AsNoTracking()
             .ProjectToDto()
             .Where(o => o.BuyerEmail == User.GetUsername() && id == o.Id)
             .FirstOrDefaultAsync();
-        
-        if(order == null) return  NotFound();
+
+        if (order == null) return NotFound();
 
         return order;
     }
@@ -45,42 +45,51 @@ public class OrderController(StoreContext context) : BaseApiController
     {
         var basket = await context.Baskets.GetBasketWithItems(Request.Cookies["basketId"]);
 
-        if(basket == null || 
-        basket.Items.Count == 0 || 
+        if (basket == null ||
+        basket.Items.Count == 0 ||
         string.IsNullOrEmpty(basket.PaymentIntentId)) return NotFound("Basket not found or is empty");
 
         var items = CreateOrderItems(basket.Items);
 
-        if(items == null) return BadRequest("Some items out of stock");
+        if (items == null) return BadRequest("Some items out of stock");
 
         var subtotal = items.Sum(x => x.Price * x.Quantity);
 
         var deliveryFee = CalculateDeliveryFee(subtotal);
 
-        var order = new Order
+        var order = await context.Orders
+            .Include(x => x.OrderItems)
+            .FirstOrDefaultAsync(x => x.PaymentIntentId == basket.PaymentIntentId);
+
+        if (order == null)
         {
-            OrderItems = items,
-            BuyerEmail = User.GetUsername(),
-            ShippingAddress = orderDto.ShippingAddress,
-            Subtotal = subtotal,
-            DeliveryFee = deliveryFee,
-            PaymentSummary = orderDto.PaymentSummary,
-            PaymentIntentId = basket.PaymentIntentId
+            order = new Order
+            {
+                OrderItems = items,
+                BuyerEmail = User.GetUsername(),
+                ShippingAddress = orderDto.ShippingAddress,
+                Subtotal = subtotal,
+                DeliveryFee = deliveryFee,
+                PaymentSummary = orderDto.PaymentSummary,
+                PaymentIntentId = basket.PaymentIntentId
 
-        };
-        context.Orders.Add(order);
+            };
 
-        context.Baskets.Remove(basket);
-        Response.Cookies.Delete("basketId");
+            context.Orders.Add(order);
+        }
+        else
+        {
+            order.OrderItems = items;
+        }
 
         var result = await context.SaveChangesAsync() > 0;
 
-        if(!result) return BadRequest("Problem creating order");
+        if (!result) return BadRequest("Problem creating order");
 
-        return CreatedAtAction(nameof(GetOrderDetails), new {id = order.Id}, order.ToDto());
+        return CreatedAtAction(nameof(GetOrderDetails), new { id = order.Id }, order.ToDto());
     }
 
-    
+
 
     #region private methods
 
@@ -90,7 +99,7 @@ public class OrderController(StoreContext context) : BaseApiController
 
         foreach (var item in items)
         {
-            if(item.Product.QuantityInStock < item.Quantity) return null;
+            if (item.Product.QuantityInStock < item.Quantity) return null;
 
             var orderItem = new OrderItem
             {
@@ -114,7 +123,7 @@ public class OrderController(StoreContext context) : BaseApiController
 
     private static long CalculateDeliveryFee(long subtotal)
     {
-        return subtotal > 10000 ? 0 : 500; 
+        return subtotal > 10000 ? 0 : 500;
     }
 
     #endregion
