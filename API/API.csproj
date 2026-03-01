@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <Folder Include="Data\" />
+    <Folder Include="Entities/OrderAggregate/" />
     <Folder Include="Entities\" />
     <Folder Include="Extensions\" />
     <Folder Include="Middleware\" />
